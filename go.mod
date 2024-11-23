@@ -1,4 +1,4 @@
-module multi_logger
+module github.com/Darckfast/multi-logger
 
 go 1.22.4
 
