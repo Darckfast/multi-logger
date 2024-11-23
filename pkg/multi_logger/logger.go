@@ -26,10 +26,11 @@ const (
 )
 
 var (
-	maxQueue     = make(chan int, 5)
-	wg           sync.WaitGroup
-	API_KEY      = ""
-	SERVICE_NAME = ""
+	maxQueue         = make(chan int, 5)
+	wg               sync.WaitGroup
+	BASELIME_API_KEY = ""
+	AXIOM_API_KEY    = ""
+	SERVICE_NAME     = ""
 )
 
 func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
@@ -64,14 +65,18 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 
 	h.l.Println(string(jsonBytes))
 
-	if API_KEY != "" {
-		SendLogsHTTP(&record, fields)
+	if BASELIME_API_KEY != "" {
+		SendLogsBaselime(&record, fields)
+	}
+
+	if AXIOM_API_KEY != "" {
+		SendLogsAxiom(&record, fields)
 	}
 
 	return nil
 }
 
-func SendLogsHTTP(record *slog.Record, fields map[string]any) {
+func SendLogsBaselime(record *slog.Record, fields map[string]any) {
 	maxQueue <- 1
 	wg.Add(1)
 
@@ -79,8 +84,30 @@ func SendLogsHTTP(record *slog.Record, fields map[string]any) {
 
 	req, _ := http.NewRequest("POST", "https://events.baselime.io/v1/logs", bytes.NewBuffer(body))
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("x-api-key", API_KEY)
-	req.Header.Add("x-service", SERVICE_NAME)
+	req.Header.Add("x-api-key", BASELIME_API_KEY)
+
+	client := &http.Client{
+		Timeout: time.Second * 1,
+	}
+
+	go func() {
+		defer wg.Done()
+
+		client.Do(req)
+
+		<-maxQueue
+	}()
+}
+
+func SendLogsAxiom(record *slog.Record, fields map[string]any) {
+	maxQueue <- 1
+	wg.Add(1)
+
+	body, _ := json.Marshal([]any{fields})
+
+	req, _ := http.NewRequest("POST", "https://api.axiom.co/v1/datasets/main/ingest", bytes.NewBuffer(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+AXIOM_API_KEY)
 
 	client := &http.Client{
 		Timeout: time.Second * 1,
@@ -136,9 +163,10 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 	ctx = AppendCtx(ctx, slog.String("content-type", r.Header.Get("content-type")))
 	ctx = AppendCtx(ctx, slog.String(NAMESPACE_KEY, r.URL.Path))
 	ctx = AppendCtx(ctx, slog.Time(STARTED_AT_KEY, time.Now()))
+	ctx = AppendCtx(ctx, slog.String(SERVICE_NAME, opts.ServiceName))
 
-	SERVICE_NAME = opts.ServiceName
-	API_KEY = opts.ApiKey
+	BASELIME_API_KEY = opts.BaselimeApiKey
+	AXIOM_API_KEY = opts.AxiomApiKey 
 
 	return ctx, &wg
 }
