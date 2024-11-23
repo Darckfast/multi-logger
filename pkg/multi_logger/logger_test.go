@@ -1,4 +1,4 @@
-package utils
+package multilogger
 
 import (
 	"log/slog"

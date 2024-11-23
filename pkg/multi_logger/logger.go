@@ -1,4 +1,4 @@
-package utils
+package multilogger
 
 import (
 	"bytes"
@@ -100,7 +100,7 @@ func NewHandler(
 ) *Handler {
 	h := &Handler{
 		Handler: slog.NewJSONHandler(out, nil),
-		l: log.New(out, "", 0),
+		l:       log.New(out, "", 0),
 	}
 
 	return h
