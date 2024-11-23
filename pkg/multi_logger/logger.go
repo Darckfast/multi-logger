@@ -8,7 +8,6 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"slices"
 	"sync"
 	"time"
 
@@ -26,7 +25,6 @@ const (
 	DATA_KEY       string = "data"
 )
 
-var ROOT_KEYS = []string{REQUEST_ID_KEY, LEVEL_KEY, NAMESPACE_KEY, MESSAGE_KEY, TIMESTAMP_KEY}
 var (
 	maxQueue     = make(chan int, 5)
 	wg           sync.WaitGroup
@@ -35,26 +33,20 @@ var (
 )
 
 func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
-	fields := make(map[string]any, len(ROOT_KEYS))
-	fields[DATA_KEY] = make(map[string]any, record.NumAttrs())
+	fields := make(map[string]any, record.NumAttrs())
 
 	fields[MESSAGE_KEY] = record.Message
 	fields[LEVEL_KEY] = record.Level.String()
 	fields[TIMESTAMP_KEY] = record.Time.UTC()
 
 	record.Attrs(func(attr slog.Attr) bool {
-		(fields[DATA_KEY].(map[string]any))[attr.Key] = attr.Value.Any()
-		// fields[attr.Key] = attr.Value.Any()
+		fields[attr.Key] = attr.Value.Any()
 		return true
 	})
 
 	if attrs, ok := ctx.Value(slogFields).([]slog.Attr); ok {
 		for _, attr := range attrs {
-			if slices.Contains(ROOT_KEYS, attr.Key) {
-				fields[attr.Key] = attr.Value.Any()
-			} else {
-				(fields[DATA_KEY].(map[string]any))[attr.Key] = attr.Value.Any()
-			}
+			fields[attr.Key] = attr.Value.Any()
 		}
 	}
 
@@ -83,20 +75,7 @@ func SendLogsHTTP(record *slog.Record, fields map[string]any) {
 	maxQueue <- 1
 	wg.Add(1)
 
-	payload := BaselimePayload{
-		Message:   record.Message,
-		Level:     record.Level.String(),
-		Duration:  fields["duration"],
-		RequestId: fields["requestId"],
-		Timestamp: fields["timestamp"],
-		Namespace: fields["namespace"],
-	}
-
-	if record.Level == slog.LevelError {
-		payload.Error = fields["error"]
-	}
-
-	body, _ := json.Marshal(payload)
+	body, _ := json.Marshal(fields)
 
 	req, _ := http.NewRequest("POST", "https://events.baselime.io/v1/logs", bytes.NewBuffer(body))
 	req.Header.Add("Content-Type", "application/json")
@@ -154,6 +133,7 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 	ctx = AppendCtx(ctx, slog.String("method", r.Method))
 	ctx = AppendCtx(ctx, slog.String("x-forwarded-for", r.Header.Get("X-Forwarded-For")))
 	ctx = AppendCtx(ctx, slog.Int64("content-length", r.ContentLength))
+	ctx = AppendCtx(ctx, slog.String("content-type", r.Header.Get("content-type")))
 	ctx = AppendCtx(ctx, slog.String(NAMESPACE_KEY, r.URL.Path))
 	ctx = AppendCtx(ctx, slog.Time(STARTED_AT_KEY, time.Now()))
 
