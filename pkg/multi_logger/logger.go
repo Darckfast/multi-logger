@@ -15,7 +15,13 @@ import (
 )
 
 const (
-	slogFields key = "slog_fields"
+	slogFields     key    = "slog_fields"
+	REQUEST_ID_KEY string = "requestId"
+	NAMESPACE_KEY  string = "namespace"
+	MESSAGE_KEY    string = "message"
+	LEVEL_KEY      string = "level"
+	TIMESTAMP_KEY  string = "timestamp"
+	STARTED_AT_KEY string = "startedAt"
 )
 
 var (
@@ -28,9 +34,9 @@ var (
 func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 	fields := make(map[string]any, record.NumAttrs())
 
-	fields["message"] = record.Message
-	fields["level"] = record.Level.String()
-	fields["timestamp"] = record.Time.UTC()
+	fields[MESSAGE_KEY] = record.Message
+	fields[LEVEL_KEY] = record.Level.String()
+	fields[TIMESTAMP_KEY] = record.Time.UTC()
 
 	record.Attrs(func(attribute slog.Attr) bool {
 		fields[attribute.Key] = attribute.Value.Any()
@@ -43,7 +49,13 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 		}
 	}
 
-	startedAt := fields["startedAt"].(time.Time)
+	if fields[STARTED_AT_KEY] == nil {
+		timeNow := time.Now()
+		fields[STARTED_AT_KEY] = timeNow
+		AppendCtx(ctx, slog.Time(STARTED_AT_KEY, timeNow))
+	}
+
+	startedAt := fields[STARTED_AT_KEY].(time.Time)
 	duration := time.Since(startedAt).Milliseconds()
 	fields["duration"] = duration
 
@@ -123,11 +135,12 @@ func AppendCtx(parent context.Context, attr slog.Attr) context.Context {
 
 func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 	uid, _ := uuid.NewV7()
-	ctx := AppendCtx(context.Background(), slog.String("requestId", uid.String()))
-	ctx = AppendCtx(ctx, slog.String("namespace", opts.Namespace))
-	ctx = AppendCtx(ctx, slog.Time("startedAt", time.Now()))
+	ctx := AppendCtx(context.Background(), slog.String(REQUEST_ID_KEY, uid.String()))
+	ctx = AppendCtx(ctx, slog.String(NAMESPACE_KEY, opts.Namespace))
+	ctx = AppendCtx(ctx, slog.Time(STARTED_AT_KEY, time.Now()))
 	SERVICE_NAME = opts.ServiceName
 	API_KEY = opts.ApiKey
 
 	return ctx, &wg
 }
+
