@@ -2,6 +2,8 @@ package multilogger
 
 import (
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"testing"
@@ -12,9 +14,15 @@ import (
 
 func TestSetupContext(t *testing.T) {
 	opt := &SetupOps{
-		Namespace:   "/route/test",
 		ApiKey:      "api_key",
 		ServiceName: "test-service",
+		Request: &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Path:     "/route/test",
+				RawQuery: "1=2&3=4",
+			},
+		},
 	}
 
 	ctx, wg := SetupContext(opt)
@@ -47,8 +55,14 @@ func TestSetupContext(t *testing.T) {
 
 func TestNewHandlerWithNoHTTP(t *testing.T) {
 	opt := &SetupOps{
-		Namespace:   "/route/test",
 		ServiceName: "test-service",
+		Request: &http.Request{
+			Method: "GET",
+			URL: &url.URL{
+				Path:     "/route/test",
+				RawQuery: "1=2&3=4",
+			},
+		},
 	}
 
 	handler := NewHandler(os.Stdout)

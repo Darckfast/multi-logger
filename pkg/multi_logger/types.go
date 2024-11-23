@@ -3,6 +3,7 @@ package multilogger
 import (
 	"log"
 	"log/slog"
+	"net/http"
 )
 
 type Handler struct {
@@ -23,7 +24,7 @@ type BaselimePayload struct {
 }
 
 type SetupOps struct {
-	Namespace   string
 	ApiKey      string
 	ServiceName string
+	Request     *http.Request
 }
