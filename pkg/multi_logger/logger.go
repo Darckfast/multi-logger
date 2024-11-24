@@ -161,12 +161,12 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 	ctx = AppendCtx(ctx, slog.String("x-forwarded-for", r.Header.Get("X-Forwarded-For")))
 	ctx = AppendCtx(ctx, slog.Int64("content-length", r.ContentLength))
 	ctx = AppendCtx(ctx, slog.String("content-type", r.Header.Get("content-type")))
+    ctx = AppendCtx(ctx, slog.String("service", opts.ServiceName))
 	ctx = AppendCtx(ctx, slog.String(NAMESPACE_KEY, r.URL.Path))
 	ctx = AppendCtx(ctx, slog.Time(STARTED_AT_KEY, time.Now()))
-	ctx = AppendCtx(ctx, slog.String(SERVICE_NAME, opts.ServiceName))
 
 	BASELIME_API_KEY = opts.BaselimeApiKey
-	AXIOM_API_KEY = opts.AxiomApiKey 
+	AXIOM_API_KEY = opts.AxiomApiKey
 
 	return ctx, &wg
 }
