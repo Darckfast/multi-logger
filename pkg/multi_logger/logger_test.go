@@ -47,7 +47,7 @@ func TestSetupContext(t *testing.T) {
 	assert.NotEmpty(t, requestId)
 	assert.Equal(t, "/route/test", namespace)
 	assert.Equal(t, "api_key", BASELIME_API_KEY)
-	assert.Equal(t, "test-service", SERVICE_NAME)
+	assert.Equal(t, "test-service", fields["service"])
 	assert.NotNil(t, startedAt)
 	assert.IsType(t, time.Time{}, startedAt)
 	assert.IsType(t, &sync.WaitGroup{}, wg)
