@@ -26,11 +26,12 @@ const (
 )
 
 var (
-	maxQueue         = make(chan int, 5)
-	wg               sync.WaitGroup
-	BASELIME_API_KEY = ""
-	AXIOM_API_KEY    = ""
-	SERVICE_NAME     = ""
+	maxQueue            = make(chan int, 5)
+	wg                  sync.WaitGroup
+	BASELIME_API_KEY    = ""
+	AXIOM_API_KEY       = ""
+	BETTERSTACK_API_KEY = ""
+	SERVICE_NAME        = ""
 )
 
 func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
@@ -65,22 +66,26 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 
 	h.l.Println(string(jsonBytes))
 
+	body, _ := json.Marshal([]any{fields})
+
 	if BASELIME_API_KEY != "" {
-		SendLogsBaselime(&record, fields)
+		SendLogsBaselime(body)
 	}
 
 	if AXIOM_API_KEY != "" {
-		SendLogsAxiom(&record, fields)
+		SendLogsAxiom(body)
+	}
+
+	if BETTERSTACK_API_KEY != "" {
+		SendLogsBetterStack(body)
 	}
 
 	return nil
 }
 
-func SendLogsBaselime(record *slog.Record, fields map[string]any) {
+func SendLogsBaselime(body []byte) {
 	maxQueue <- 1
 	wg.Add(1)
-
-	body, _ := json.Marshal(fields)
 
 	req, _ := http.NewRequest("POST", "https://events.baselime.io/v1/logs", bytes.NewBuffer(body))
 	req.Header.Add("Content-Type", "application/json")
@@ -99,11 +104,30 @@ func SendLogsBaselime(record *slog.Record, fields map[string]any) {
 	}()
 }
 
-func SendLogsAxiom(record *slog.Record, fields map[string]any) {
+func SendLogsBetterStack(body []byte) {
 	maxQueue <- 1
 	wg.Add(1)
 
-	body, _ := json.Marshal([]any{fields})
+	req, _ := http.NewRequest("POST", "https://in.logs.betterstack.com", bytes.NewBuffer(body))
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer "+BETTERSTACK_API_KEY)
+
+	client := &http.Client{
+		Timeout: time.Second * 1,
+	}
+
+	go func() {
+		defer wg.Done()
+
+		client.Do(req)
+
+		<-maxQueue
+	}()
+}
+
+func SendLogsAxiom(body []byte) {
+	maxQueue <- 1
+	wg.Add(1)
 
 	req, _ := http.NewRequest("POST", "https://api.axiom.co/v1/datasets/main/ingest", bytes.NewBuffer(body))
 	req.Header.Add("Content-Type", "application/json")
@@ -161,13 +185,13 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 	ctx = AppendCtx(ctx, slog.String("x-forwarded-for", r.Header.Get("X-Forwarded-For")))
 	ctx = AppendCtx(ctx, slog.Int64("content-length", r.ContentLength))
 	ctx = AppendCtx(ctx, slog.String("content-type", r.Header.Get("content-type")))
-    ctx = AppendCtx(ctx, slog.String("service", opts.ServiceName))
+	ctx = AppendCtx(ctx, slog.String("service", opts.ServiceName))
 	ctx = AppendCtx(ctx, slog.String(NAMESPACE_KEY, r.URL.Path))
 	ctx = AppendCtx(ctx, slog.Time(STARTED_AT_KEY, time.Now()))
 
 	BASELIME_API_KEY = opts.BaselimeApiKey
 	AXIOM_API_KEY = opts.AxiomApiKey
+	BETTERSTACK_API_KEY = opts.BetterStackApiKey
 
 	return ctx, &wg
 }
-

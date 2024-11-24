@@ -24,8 +24,9 @@ type BaselimePayload struct {
 }
 
 type SetupOps struct {
-	BaselimeApiKey string
-	AxiomApiKey    string
-	ServiceName    string
-	Request        *http.Request
+	BaselimeApiKey    string
+	AxiomApiKey       string
+	BetterStackApiKey string
+	ServiceName       string
+	Request           *http.Request
 }
