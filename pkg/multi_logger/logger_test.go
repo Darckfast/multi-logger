@@ -71,3 +71,15 @@ func TestNewHandlerWithNoHTTP(t *testing.T) {
 	logger := slog.New(handler)
 	logger.InfoContext(ctx, "test", "key1", "value1", "key2", "value2")
 }
+
+func TestNewHandlerWithNoRequest(t *testing.T) {
+	opt := &SetupOps{
+		ServiceName: "test-service",
+	}
+
+	handler := NewHandler(os.Stdout)
+	ctx, _ := SetupContext(opt)
+
+	logger := slog.New(handler)
+	logger.InfoContext(ctx, "test", "key1", "value1", "key2", "value2")
+}
