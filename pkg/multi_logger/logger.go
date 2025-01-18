@@ -58,9 +58,11 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 		AppendCtx(ctx, slog.Time(STARTED_AT_KEY, timeNow))
 	}
 
-	startedAt := fields[STARTED_AT_KEY].(time.Time)
-	duration := time.Since(startedAt).Milliseconds()
-	fields["duration"] = duration
+	if fields["duration"] == nil {
+		startedAt := fields[STARTED_AT_KEY].(time.Time)
+		duration := time.Since(startedAt).Milliseconds()
+		fields["duration"] = duration
+	}
 
 	jsonBytes, _ := json.Marshal(fields)
 
