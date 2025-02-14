@@ -29,5 +29,5 @@ type SetupOps struct {
 	BetterStackApiKey string
 	ServiceName       string
 	Request           *http.Request
-	RequestGen        RequestGen
+	RequestGen        SendLogsFunc
 }
