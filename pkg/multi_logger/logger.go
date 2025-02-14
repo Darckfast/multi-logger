@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"log/slog"
-	"net/http"
 	"sync"
 	"time"
 
@@ -69,82 +68,11 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 
 	body, _ := json.Marshal([]any{fields})
 
-	if BASELIME_API_KEY != "" {
-		SendLogsBaselime(body)
-	}
-
 	if AXIOM_API_KEY != "" {
-		SendLogsAxiom(body)
-	}
-
-	if BETTERSTACK_API_KEY != "" {
-		SendLogsBetterStack(body)
+		SendLogs(maxQueue, &wg, "POST", "https://api.axiom.co/v1/datasets/main/ingest", "Bearer "+AXIOM_API_KEY, &body)
 	}
 
 	return nil
-}
-
-func SendLogsBaselime(body []byte) {
-	maxQueue <- 1
-	wg.Add(1)
-
-	req, _ := GenerateRequest("POST", "https://events.baselime.io/v1/logs", body)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("x-api-key", BASELIME_API_KEY)
-
-	client := &http.Client{
-		Timeout: time.Second * 1,
-	}
-
-	go func() {
-		defer wg.Done()
-
-		client.Do(req)
-
-		<-maxQueue
-	}()
-}
-
-func SendLogsBetterStack(body []byte) {
-	maxQueue <- 1
-	wg.Add(1)
-
-	req, _ := GenerateRequest("POST", "https://in.logs.betterstack.com", body)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+BETTERSTACK_API_KEY)
-
-	client := &http.Client{
-		Timeout: time.Second * 1,
-	}
-
-	go func() {
-		defer wg.Done()
-
-		client.Do(req)
-
-		<-maxQueue
-	}()
-}
-
-func SendLogsAxiom(body []byte) {
-	maxQueue <- 1
-	wg.Add(1)
-
-	req, _ := GenerateRequest("POST", "https://api.axiom.co/v1/datasets/main/ingest", body)
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", "Bearer "+AXIOM_API_KEY)
-
-	client := &http.Client{
-		Timeout: time.Second * 1,
-	}
-
-	go func() {
-		defer wg.Done()
-
-		client.Do(req)
-
-		<-maxQueue
-	}()
 }
 
 func NewHandler(
@@ -191,7 +119,7 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 	}
 
 	if opts.RequestGen != nil {
-		GenerateRequest = opts.RequestGen
+		SendLogs = opts.RequestGen
 	}
 
 	ctx = AppendCtx(ctx, slog.String("service", opts.ServiceName))
