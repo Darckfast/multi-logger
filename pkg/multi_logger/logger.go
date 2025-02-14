@@ -1,7 +1,6 @@
 package multilogger
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -89,7 +88,7 @@ func SendLogsBaselime(body []byte) {
 	maxQueue <- 1
 	wg.Add(1)
 
-	req, _ := http.NewRequest("POST", "https://events.baselime.io/v1/logs", bytes.NewBuffer(body))
+	req, _ := GenerateRequest("POST", "https://events.baselime.io/v1/logs", body)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("x-api-key", BASELIME_API_KEY)
 
@@ -110,7 +109,7 @@ func SendLogsBetterStack(body []byte) {
 	maxQueue <- 1
 	wg.Add(1)
 
-	req, _ := http.NewRequest("POST", "https://in.logs.betterstack.com", bytes.NewBuffer(body))
+	req, _ := GenerateRequest("POST", "https://in.logs.betterstack.com", body)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+BETTERSTACK_API_KEY)
 
@@ -131,7 +130,7 @@ func SendLogsAxiom(body []byte) {
 	maxQueue <- 1
 	wg.Add(1)
 
-	req, _ := http.NewRequest("POST", "https://api.axiom.co/v1/datasets/main/ingest", bytes.NewBuffer(body))
+	req, _ := GenerateRequest("POST", "https://api.axiom.co/v1/datasets/main/ingest", body)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer "+AXIOM_API_KEY)
 
@@ -189,6 +188,10 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 		ctx = AppendCtx(ctx, slog.Int64("content-length", r.ContentLength))
 		ctx = AppendCtx(ctx, slog.String("content-type", r.Header.Get("content-type")))
 		ctx = AppendCtx(ctx, slog.String(NAMESPACE_KEY, r.URL.Path))
+	}
+
+	if opts.RequestGen != nil {
+		GenerateRequest = opts.RequestGen
 	}
 
 	ctx = AppendCtx(ctx, slog.String("service", opts.ServiceName))
