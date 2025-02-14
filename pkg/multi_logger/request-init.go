@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type SendLogsFunc func(maxQueue chan int, wg *sync.WaitGroup, body *[]byte)
+type SendLogsFunc func(maxQueue chan int, wg *sync.WaitGroup, method, url, bearer string, body *[]byte)
 
 var SendLogs = func(maxQueue chan int, wg *sync.WaitGroup, method, url, bearer string, body *[]byte) {
 	maxQueue <- 1
