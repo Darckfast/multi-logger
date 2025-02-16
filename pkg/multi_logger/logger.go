@@ -112,9 +112,11 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 
 		requestIp := r.Header.Get("X-Forwarded-For")
 		connectingIp := r.Header.Get("CF-Connecting-IP")
-		if connectingIp == "" {
-			requestIp += connectingIp
+		if requestIp != "" && connectingIp != "" {
+			requestIp += ","
 		}
+		requestIp += connectingIp
+
 		ctx = AppendCtx(ctx, slog.String("x-forwarded-for", requestIp))
 		ctx = AppendCtx(ctx, slog.String("country", r.Header.Get("CF-IPCountry")))
 		ctx = AppendCtx(ctx, slog.Int64("content-length", r.ContentLength))
