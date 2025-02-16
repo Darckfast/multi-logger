@@ -65,7 +65,7 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 	body, _ := json.Marshal([]any{fields})
 
 	if AXIOM_API_KEY != "" {
-		sendLogsArs.body = &body
+		sendLogsArs.Body = &body
 		SendLogs(sendLogsArs)
 	}
 
@@ -131,12 +131,12 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 
 	AXIOM_API_KEY = opts.AxiomApiKey
 
-	sendLogsArs.wg = &sync.WaitGroup{}
-	sendLogsArs.ctx = ctx
-	sendLogsArs.maxQueue = make(chan int, 5)
-	sendLogsArs.method = "POST"
-	sendLogsArs.url = "https://api.axiom.co/v1/datasets/main/ingest"
-	sendLogsArs.bearer = "Bearer " + AXIOM_API_KEY
+	sendLogsArs.Wg = &sync.WaitGroup{}
+	sendLogsArs.Ctx = ctx
+	sendLogsArs.MaxQueue = make(chan int, 5)
+	sendLogsArs.Method = "POST"
+	sendLogsArs.Url = "https://api.axiom.co/v1/datasets/main/ingest"
+	sendLogsArs.Bearer = "Bearer " + AXIOM_API_KEY
 
-	return ctx, sendLogsArs.wg
+	return ctx, sendLogsArs.Wg
 }
