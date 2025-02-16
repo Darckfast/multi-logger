@@ -14,8 +14,7 @@ import (
 
 func TestSetupContext(t *testing.T) {
 	opt := &SetupOps{
-		BaselimeApiKey: "api_key",
-		ServiceName:    "test-service",
+		ServiceName: "test-service",
 		Request: &http.Request{
 			Method: "GET",
 			URL: &url.URL{
@@ -46,7 +45,6 @@ func TestSetupContext(t *testing.T) {
 
 	assert.NotEmpty(t, requestId)
 	assert.Equal(t, "/route/test", namespace)
-	assert.Equal(t, "api_key", BASELIME_API_KEY)
 	assert.Equal(t, "test-service", fields["service"])
 	assert.NotNil(t, startedAt)
 	assert.IsType(t, time.Time{}, startedAt)

@@ -2,30 +2,41 @@ package multilogger
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"sync"
 	"time"
 )
 
-type SendLogsFunc func(maxQueue chan int, wg *sync.WaitGroup, method, url, bearer string, body *[]byte)
+type SendLogsArgs struct {
+	ctx      context.Context
+	maxQueue chan int
+	wg       *sync.WaitGroup
+	method   string
+	url      string
+	bearer   string
+	body     *[]byte
+}
 
-var SendLogs = func(maxQueue chan int, wg *sync.WaitGroup, method, url, bearer string, body *[]byte) {
-	maxQueue <- 1
-	wg.Add(1)
+type SendLogsFunc func(args SendLogsArgs)
 
-	req, _ := http.NewRequest(method, url, bytes.NewBuffer(*body))
+var SendLogs = func(args SendLogsArgs) {
+	args.maxQueue <- 1
+	args.wg.Add(1)
+
+	req, _ := http.NewRequest(args.method, args.url, bytes.NewBuffer(*args.body))
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", bearer)
+	req.Header.Add("Authorization", args.bearer)
 
 	client := &http.Client{
 		Timeout: time.Second * 1,
 	}
 
 	go func() {
-		defer wg.Done()
+		defer args.wg.Done()
 
 		client.Do(req)
 
-		<-maxQueue
+		<-args.maxQueue
 	}()
 }

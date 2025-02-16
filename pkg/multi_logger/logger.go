@@ -24,11 +24,11 @@ const (
 )
 
 var (
-	maxQueue      = make(chan int, 5)
-	wg            sync.WaitGroup
 	AXIOM_API_KEY = ""
 	SERVICE_NAME  = ""
 )
+
+var sendLogsArs SendLogsArgs
 
 func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 	fields := make(map[string]any, record.NumAttrs())
@@ -61,13 +61,12 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 	}
 
 	jsonBytes, _ := json.Marshal(fields)
-
 	h.l.Println(string(jsonBytes))
-
 	body, _ := json.Marshal([]any{fields})
 
 	if AXIOM_API_KEY != "" {
-		SendLogs(maxQueue, &wg, "POST", "https://api.axiom.co/v1/datasets/main/ingest", "Bearer "+AXIOM_API_KEY, &body)
+		sendLogsArs.body = &body
+		SendLogs(sendLogsArs)
 	}
 
 	return nil
@@ -130,9 +129,14 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 	ctx = AppendCtx(ctx, slog.String("service", opts.ServiceName))
 	ctx = AppendCtx(ctx, slog.Time(STARTED_AT_KEY, time.Now()))
 
-	BASELIME_API_KEY = opts.BaselimeApiKey
 	AXIOM_API_KEY = opts.AxiomApiKey
-	BETTERSTACK_API_KEY = opts.BetterStackApiKey
 
-	return ctx, &wg
+	sendLogsArs.wg = &sync.WaitGroup{}
+	sendLogsArs.ctx = ctx
+	sendLogsArs.maxQueue = make(chan int, 5)
+	sendLogsArs.method = "POST"
+	sendLogsArs.url = "https://api.axiom.co/v1/datasets/main/ingest"
+	sendLogsArs.bearer = "Bearer " + AXIOM_API_KEY
+
+	return ctx, sendLogsArs.wg
 }
