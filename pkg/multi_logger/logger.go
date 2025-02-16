@@ -24,12 +24,10 @@ const (
 )
 
 var (
-	maxQueue            = make(chan int, 5)
-	wg                  sync.WaitGroup
-	BASELIME_API_KEY    = ""
-	AXIOM_API_KEY       = ""
-	BETTERSTACK_API_KEY = ""
-	SERVICE_NAME        = ""
+	maxQueue      = make(chan int, 5)
+	wg            sync.WaitGroup
+	AXIOM_API_KEY = ""
+	SERVICE_NAME  = ""
 )
 
 func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
@@ -112,7 +110,14 @@ func SetupContext(opts *SetupOps) (context.Context, *sync.WaitGroup) {
 		ctx = AppendCtx(ctx, slog.String("ip", r.RemoteAddr))
 		ctx = AppendCtx(ctx, slog.String("host", r.Host))
 		ctx = AppendCtx(ctx, slog.String("method", r.Method))
-		ctx = AppendCtx(ctx, slog.String("x-forwarded-for", r.Header.Get("X-Forwarded-For")))
+
+		requestIp := r.Header.Get("X-Forwarded-For")
+		connectingIp := r.Header.Get("CF-Connecting-IP")
+		if connectingIp == "" {
+			requestIp += connectingIp
+		}
+		ctx = AppendCtx(ctx, slog.String("x-forwarded-for", requestIp))
+		ctx = AppendCtx(ctx, slog.String("country", r.Header.Get("CF-IPCountry")))
 		ctx = AppendCtx(ctx, slog.Int64("content-length", r.ContentLength))
 		ctx = AppendCtx(ctx, slog.String("content-type", r.Header.Get("content-type")))
 		ctx = AppendCtx(ctx, slog.String(NAMESPACE_KEY, r.URL.Path))
